@@ -8,12 +8,15 @@ app = Flask(__name__)
 CORS(app)
 
 # Database connection
+import os
+
 def get_db():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="12qwas34erdf..",
-        database="farm_to_table"
+        host=os.environ.get("DB_HOST", "localhost"),
+        user=os.environ.get("DB_USER", "root"),
+        password=os.environ.get("DB_PASSWORD", "12qwas34erdf.."),
+        database=os.environ.get("DB_NAME", "farm_to_table"),
+        port=int(os.environ.get("DB_PORT", 3306))
     )
 
 # ─── FARMS ───────────────────────────────
