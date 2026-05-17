@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Register | FarmFresh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .auth-tab { flex: 1; padding: 12px; border: none; background: #f1f5f9; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center; color: #475569; }
+        .auth-tab.active { background: #16a34a; color: white; }
+        .auth-input { padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; margin-bottom: 16px; width: 100%; box-sizing: border-box; }
+        .auth-input:focus { outline: none; border-color: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,0.15); }
+        .auth-error { color: #dc2626; font-size: 0.85rem; margin-bottom: 12px; min-height: 20px; text-align: center; }
+        .btn-green { background: #16a34a; color: white; padding: 12px 16px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; width: 100%; transition: background 0.2s; }
+        .btn-green:hover { background: #15803d; }
+    </style>
+</head>
+<body class="min-h-screen bg-green-50 flex flex-col">
+
+<!-- NAVBAR -->
+<header class="bg-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <a href="index.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                <span class="text-white font-bold text-sm">F</span>
+            </div>
+            <span class="text-xl font-bold text-gray-900">FarmFresh</span>
+        </a>
+        <nav class="flex items-center space-x-6">
+            <a href="index.html" class="text-gray-600 hover:text-green-600 font-medium">Home</a>
+            <a href="index.html#farms-section" class="text-gray-600 hover:text-green-600 font-medium">Farms</a>
+            <a href="javascript:void(0)" onclick="goToShop(event)" class="text-gray-600 hover:text-green-600 font-medium">Shop</a>
+            <a href="support.html" class="text-gray-600 hover:text-green-600 font-medium">Support</a>
+            
+            <a href="shop.html" class="relative text-gray-600 hover:text-green-600 focus:outline-none">
+                <span class="text-2xl">🛒</span>
+                <span id="navCartBadge" class="absolute -top-2 -right-2 bg-red-500 text-white font-bold w-5 h-5 rounded-full flex items-center justify-center text-xs hidden">0</span>
+            </a>
+            
+            <div id="navAuth">
+                <!-- Injected via JS -->
+            </div>
+        </nav>
+    </div>
+</header>
+
+<main class="flex-grow flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden w-full max-w-md">
+        <!-- Tabs -->
+        <div class="flex">
+            <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Log In</button>
+            <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <div id="loginForm" class="p-8">
+            <h2 class="text-2xl font-bold mb-2 text-center text-gray-900">👋 Welcome Back</h2>
+            <p class="text-gray-500 text-sm text-center mb-6">Enter your email and password to log in</p>
+            <input type="email" id="loginEmail" class="auth-input" placeholder="Email address">
+            <input type="password" id="loginPassword" class="auth-input" placeholder="Password">
+            <div class="auth-error" id="loginError"></div>
+            <button class="btn-green" onclick="loginUser()">Log In</button>
+            <p class="text-center text-sm text-gray-500 mt-6">
+                No account? <a href="#" onclick="switchAuthTab('register')" class="text-green-600 font-semibold hover:underline">Register here</a>
+            </p>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div id="registerForm" class="p-8" style="display:none">
+            <h2 class="text-2xl font-bold mb-2 text-center text-gray-900">🌱 Create Account</h2>
+            <p class="text-gray-500 text-sm text-center mb-6">Join FarmFresh today</p>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <input type="text" id="regFirstName" class="auth-input !mb-0" placeholder="First name">
+                <input type="text" id="regLastName"  class="auth-input !mb-0" placeholder="Last name">
+            </div>
+            <input type="email"  id="regEmail"   class="auth-input" placeholder="Email address">
+            <input type="password" id="regPassword"  class="auth-input" placeholder="Password (required)">
+            <input type="tel"    id="regPhone"   class="auth-input" placeholder="Phone (optional)">
+            <input type="text"   id="regAddress" class="auth-input" placeholder="Address (optional)">
+            <select id="regRole" class="auth-input bg-white cursor-pointer">
+                <option value="Customer">I am a Customer (Buying food)</option>
+                <option value="Farmer">I am a Farmer (Selling food)</option>
+            </select>
+            <div class="auth-error" id="registerError"></div>
+            <button class="btn-green" onclick="registerUser()">Create Account</button>
+            <p class="text-center text-sm text-gray-500 mt-6">
+                Already have an account? <a href="#" onclick="switchAuthTab('login')" class="text-green-600 font-semibold hover:underline">Log in</a>
+            </p>
+        </div>
+    </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="bg-gray-900 text-white py-12 mt-auto">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">F</span>
+                </div>
+                <span class="text-xl font-bold">FarmFresh</span>
+            </div>
+            <p class="text-gray-400">Connecting farmers and families since 2024</p>
+        </div>
+        <div class="flex justify-center space-x-6 text-sm text-gray-400 mb-8 border-t border-gray-800 pt-8">
+            <a href="index.html" class="hover:text-white">Home</a>
+            <a href="javascript:void(0)" onclick="goToShop(event)" class="hover:text-white">Shop</a>
+            <a href="index.html#farms-section" class="hover:text-white">Farms</a>
+            <a href="support.html" class="hover:text-white">Support</a>
+            <a href="auth.html" class="hover:text-white">Login</a>
+        </div>
+        <div class="text-center text-sm text-gray-500">
+            &copy; 2024 FarmFresh. All rights reserved.
+        </div>
+    </div>
+</footer>
+
+<script>
+    const API = 'http://127.0.0.1:5000';
+
+    // ── AUTH GUARD (Redirect if already logged in) ──
+    window.onload = () => {
+        const stored = localStorage.getItem('farmUser');
+        if (stored) {
+            try {
+                const user = JSON.parse(stored);
+                window.location.href = user.role === 'Farmer' ? 'farmer-dashboard.html' : 'customer-dashboard.html';
+                return;
+            } catch(e) {}
+        }
+        setupNavigation(null);
+        updateCartBadge();
+    };
+
+    function updateCartBadge() {
+        const cartStr = localStorage.getItem('farmCart');
+        if (cartStr) {
+            try {
+                const cart = JSON.parse(cartStr);
+                const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+                const badge = document.getElementById('navCartBadge');
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            } catch(e) {}
+        }
+    }
+
+    function setupNavigation(user) {
+        const navAuth = document.getElementById('navAuth');
+        if (!navAuth) return;
+        if (user) {
+            const dashLink = user.role === 'Farmer' ? 'farmer-dashboard.html' : 'customer-dashboard.html';
+            navAuth.innerHTML = `
+                <div class="flex items-center gap-4">
+                    <span class="text-green-800 bg-green-100 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                        ${user.role === 'Farmer' ? '🧑‍🌾' : '👤'} 👋 Hi, ${user.first_name}
+                    </span>
+                    <a href="${dashLink}" class="btn-green">Go to Dashboard</a>
+                </div>
+            `;
+        } else {
+            navAuth.innerHTML = `<a href="auth.html" class="btn-green">Login / Register</a>`;
+        }
+    }
+
+    function goToShop(e) {
+        if(e) e.preventDefault();
+        const stored = localStorage.getItem('farmUser');
+        if (!stored) {
+            window.location.href = 'shop.html';
+            return;
+        }
+        const user = JSON.parse(stored);
+        if (user.role === 'Farmer') {
+            window.location.href = 'farmer-dashboard.html';
+        } else {
+            window.location.href = 'shop.html';
+        }
+    }
+
+    function switchAuthTab(tab) {
+        document.getElementById('loginForm').style.display    = tab === 'login'    ? 'block' : 'none';
+        document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+        document.getElementById('tabLogin').classList.toggle('active',    tab === 'login');
+        document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+        document.getElementById('loginError').textContent    = '';
+        document.getElementById('registerError').textContent = '';
+    }
+
+    async function loginUser() {
+        const email    = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
+        const errEl    = document.getElementById('loginError');
+        const btn      = document.querySelector('#loginForm .btn-green');
+        
+        errEl.textContent = '';
+        if (!email || !password) { errEl.textContent = 'Please enter both email and password.'; return; }
+
+        try {
+            btn.textContent = 'Logging in...';
+            btn.disabled = true;
+            const res  = await fetch(`${API}/login`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Login failed');
+            
+            localStorage.setItem('farmUser', JSON.stringify(data));
+            window.location.href = data.role === 'Farmer' ? 'farmer-dashboard.html' : 'customer-dashboard.html';
+            
+        } catch (e) {
+            errEl.textContent = e.message === 'Failed to fetch' ? 'Connection error. Is Flask running?' : e.message;
+        } finally {
+            btn.textContent = 'Log In';
+            btn.disabled = false;
+        }
+    }
+
+    async function registerUser() {
+        const errEl = document.getElementById('registerError');
+        const btn   = document.querySelector('#registerForm .btn-green');
+        errEl.textContent = '';
+        
+        const payload = {
+            first_name: document.getElementById('regFirstName').value.trim(),
+            last_name:  document.getElementById('regLastName').value.trim(),
+            email:      document.getElementById('regEmail').value.trim(),
+            password:   document.getElementById('regPassword').value.trim(),
+            phone:      document.getElementById('regPhone').value.trim(),
+            address:    document.getElementById('regAddress').value.trim(),
+            role:       document.getElementById('regRole').value
+        };
+        
+        if (!payload.first_name || !payload.last_name || !payload.email || !payload.password) {
+            errEl.textContent = 'First name, last name, email, and password are required.';
+            return;
+        }
+        
+        try {
+            btn.textContent = 'Creating account...';
+            btn.disabled = true;
+            const res  = await fetch(`${API}/register`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Registration failed');
+            
+            localStorage.setItem('farmUser', JSON.stringify(data));
+            window.location.href = data.role === 'Farmer' ? 'farmer-dashboard.html' : 'customer-dashboard.html';
+            
+        } catch (e) {
+            errEl.textContent = e.message === 'Failed to fetch' ? 'Connection error. Is Flask running?' : e.message;
+        } finally {
+            btn.textContent = 'Create Account';
+            btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>

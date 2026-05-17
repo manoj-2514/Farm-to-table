@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farmer Dashboard | FarmFresh</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.glass{background:rgba(255,255,255,.97);border:1px solid rgba(229,231,235,.6);box-shadow:0 4px 24px rgba(0,0,0,.07);border-radius:14px}
+.stat-card{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #bbf7d0;border-radius:12px}
+.toggle{position:relative;display:inline-block;width:40px;height:22px}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:22px;transition:.3s}
+.slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+input:checked+.slider{background:#16a34a}
+input:checked+.slider:before{transform:translateX(18px)}
+.fab-wrap{position:fixed;bottom:28px;right:28px;z-index:100;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.fab{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:all .2s}
+.fab-main{background:#16a34a;color:#fff}
+.fab-mini{background:#fff;color:#16a34a;border:2px solid #16a34a;width:44px;height:44px;font-size:16px}
+.fab-sub{display:none;flex-direction:column;align-items:flex-end;gap:8px}
+.fab-sub.open{display:flex}
+.order-card-pending{border-left:4px solid #f59e0b}
+.order-card-completed{border-left:4px solid #16a34a}
+.order-card-shipped{border-left:4px solid #3b82f6}
+.order-card-cancelled{border-left:4px solid #ef4444}
+.tab-btn{padding:6px 16px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;transition:.2s;border:1px solid #e5e7eb;background:#fff;color:#6b7280}
+.tab-btn.active{background:#16a34a;color:#fff;border-color:#16a34a}
+.star-filled{color:#f59e0b}
+.star-empty{color:#d1d5db}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.4}}
+.pulse{animation:pulse2 1.5s infinite}
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen text-gray-800">
+
+<!-- NAVBAR -->
+<header class="bg-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <a href="index.html" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                <span class="text-white font-bold text-sm">F</span>
+            </div>
+            <span class="text-xl font-bold text-gray-900">FarmFresh</span>
+        </a>
+        <nav class="flex items-center space-x-6">
+            <a href="index.html" class="text-gray-600 hover:text-green-600 font-medium">Home</a>
+            <a href="index.html#farms-section" class="text-gray-600 hover:text-green-600 font-medium">Farms</a>
+            <a href="javascript:void(0)" onclick="goToShop(event)" class="text-gray-600 hover:text-green-600 font-medium">Shop</a>
+            <a href="support.html" class="text-gray-600 hover:text-green-600 font-medium">Support</a>
+            
+            <a href="shop.html" class="relative text-gray-600 hover:text-green-600 focus:outline-none">
+                <span class="text-2xl">🛒</span>
+                <span id="navCartBadge" class="absolute -top-2 -right-2 bg-red-500 text-white font-bold w-5 h-5 rounded-full flex items-center justify-center text-xs hidden">0</span>
+            </a>
+            
+            <div id="navAuth">
+                <!-- Injected via JS -->
+            </div>
+        </nav>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+  <!-- Hero Card -->
+  <div class="glass p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <h1 id="heroName" class="text-2xl font-bold text-gray-900">Loading...</h1>
+        <span id="heroBadge" class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Active</span>
+      </div>
+      <p id="heroLocation" class="text-gray-500 mt-1 text-sm">📍 —</p>
+      <div id="heroStars" class="mt-2 flex gap-0.5 text-lg"></div>
+    </div>
+    <div class="text-right text-sm text-gray-500">
+      <p>Member since</p>
+      <p id="heroSince" class="font-semibold text-gray-700">—</p>
+    </div>
+  </div>
+
+  <!-- Stats Row (5 cards) -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div class="stat-card p-4">
+      <p class="text-xs font-semibold text-green-800 uppercase tracking-wide">Total Revenue</p>
+      <p id="sRevenue" class="text-2xl font-bold text-green-900 mt-1">₹—</p>
+    </div>
+    <div class="stat-card p-4">
+      <p class="text-xs font-semibold text-green-800 uppercase tracking-wide">Orders</p>
+      <p id="sOrders" class="text-2xl font-bold text-green-900 mt-1">—</p>
+    </div>
+    <div class="stat-card p-4">
+      <p class="text-xs font-semibold text-green-800 uppercase tracking-wide">Avg Rating</p>
+      <p id="sRating" class="text-2xl font-bold text-green-900 mt-1">— ⭐</p>
+    </div>
+    <div class="stat-card p-4">
+      <p class="text-xs font-semibold text-green-800 uppercase tracking-wide">Top Product</p>
+      <p id="sTop" class="text-lg font-bold text-green-900 mt-1 leading-tight">—</p>
+      <p id="sTopUnits" class="text-xs text-green-700">— units this month</p>
+    </div>
+    <div class="stat-card p-4 relative">
+      <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide">Pending</p>
+      <div class="flex items-center gap-2 mt-1">
+        <p id="sPending" class="text-2xl font-bold text-amber-600">—</p>
+        <span id="pendingPulse" class="hidden pulse w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="glass p-6">
+      <h2 class="font-bold text-gray-900 mb-4">📈 Revenue — Last 7 Days</h2>
+      <div class="h-56"><canvas id="lineChart"></canvas></div>
+    </div>
+    <div class="glass p-6">
+      <h2 class="font-bold text-gray-900 mb-4">🍩 Orders by Status</h2>
+      <div class="h-56"><canvas id="donutChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Inventory -->
+  <div class="glass p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-bold text-gray-900 text-lg">📦 Manage Inventory</h2>
+      <button onclick="openModal()" class="bg-green-600 text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition">+ Add Product</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-left">
+        <thead><tr class="text-xs text-gray-500 border-b border-gray-200">
+          <th class="pb-3 font-medium">Product</th>
+          <th class="pb-3 font-medium">Price</th>
+          <th class="pb-3 font-medium">Harvest Date</th>
+          <th class="pb-3 font-medium text-center">Stock</th>
+          <th class="pb-3 font-medium text-center">Status</th>
+          <th class="pb-3 font-medium text-right">Action</th>
+        </tr></thead>
+        <tbody id="invBody" class="divide-y divide-gray-100"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Orders -->
+  <div class="glass p-6">
+    <h2 class="font-bold text-gray-900 text-lg mb-3">📋 Incoming Orders</h2>
+    <div id="orderTabs" class="flex gap-2 flex-wrap mb-4">
+      <button class="tab-btn active" onclick="filterOrders('All',this)">All</button>
+      <button class="tab-btn" onclick="filterOrders('Pending',this)">Pending</button>
+      <button class="tab-btn" onclick="filterOrders('Shipped',this)">Shipped</button>
+      <button class="tab-btn" onclick="filterOrders('Completed',this)">Completed</button>
+      <button class="tab-btn" onclick="filterOrders('Cancelled',this)">Cancelled</button>
+    </div>
+    <div id="ordersContainer" class="space-y-3 max-h-[520px] overflow-y-auto pr-1"></div>
+  </div>
+
+  <!-- Reviews -->
+  <div class="glass p-6">
+    <h2 class="font-bold text-gray-900 text-lg mb-4">⭐ Reviews & Feedback</h2>
+    <div id="reviewsContainer" class="space-y-3 max-h-[420px] overflow-y-auto pr-1"></div>
+  </div>
+
+  <!-- Inbox -->
+  <div class="glass p-6">
+    <div class="flex items-center gap-3 mb-4">
+      <h2 class="font-bold text-gray-900 text-lg">💬 Farmer Inbox</h2>
+      <span id="unreadBadge" class="hidden bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full"></span>
+    </div>
+    <div id="inboxContainer" class="space-y-3 max-h-[380px] overflow-y-auto mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200"></div>
+    <div class="flex gap-2">
+      <select id="replyToUser" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 w-1/4">
+        <option value="">Reply to...</option>
+      </select>
+      <input id="replyMessage" type="text" placeholder="Type your reply..." class="flex-grow px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+      <button onclick="sendReply()" class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">Send</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- FAB -->
+<div class="fab-wrap">
+  <div class="fab-sub" id="fabSub">
+    <div class="flex items-center gap-2">
+      <span class="bg-white text-xs font-semibold px-3 py-1 rounded-full shadow text-gray-700">Add Product</span>
+      <div class="fab fab-mini" onclick="openModal()">➕</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="bg-white text-xs font-semibold px-3 py-1 rounded-full shadow text-gray-700">Pending Orders</span>
+      <div class="fab fab-mini" onclick="filterOrders('Pending',null);document.getElementById('ordersContainer').scrollIntoView({behavior:'smooth'})">📦</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="bg-white text-xs font-semibold px-3 py-1 rounded-full shadow text-gray-700">Open Inbox</span>
+      <div class="fab fab-mini" onclick="document.getElementById('inboxContainer').scrollIntoView({behavior:'smooth'})">💬</div>
+    </div>
+  </div>
+  <div class="fab fab-main" id="fabMain" onclick="toggleFab()">＋</div>
+</div>
+
+<!-- Add Product Modal -->
+<div id="modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="glass p-6 w-full max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-bold text-gray-900 text-lg">➕ Add New Product</h3>
+      <button onclick="closeModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold">×</button>
+    </div>
+    <div class="space-y-3">
+      <input id="mName" type="text" placeholder="Product Name *" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+      <select id="mCat" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+        <option value="">Select Category *</option>
+      </select>
+      <div class="grid grid-cols-2 gap-3">
+        <input id="mPrice" type="number" placeholder="Price (₹) *" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+        <input id="mStock" type="number" placeholder="Stock *" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+      </div>
+      <input id="mHarvest" type="date" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+      <input id="mImage" type="url" placeholder="Image URL" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="closeModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
+      <button onclick="submitProduct()" class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">Add Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-xl shadow-xl transition-all duration-300 opacity-0 pointer-events-none z-[200] text-sm font-medium"></div>
+
+<!-- FOOTER -->
+<footer class="bg-gray-900 text-white py-12 mt-auto">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">F</span>
+                </div>
+                <span class="text-xl font-bold">FarmFresh</span>
+            </div>
+            <p class="text-gray-400">Connecting farmers and families since 2024</p>
+        </div>
+        <div class="flex justify-center space-x-6 text-sm text-gray-400 mb-8 border-t border-gray-800 pt-8">
+            <a href="index.html" class="hover:text-white">Home</a>
+            <a href="javascript:void(0)" onclick="goToShop(event)" class="hover:text-white">Shop</a>
+            <a href="index.html#farms-section" class="hover:text-white">Farms</a>
+            <a href="support.html" class="hover:text-white">Support</a>
+            <a href="auth.html" class="hover:text-white">Login</a>
+        </div>
+        <div class="text-center text-sm text-gray-500">
+            &copy; 2024 FarmFresh. All rights reserved.
+        </div>
+    </div>
+</footer>
+
+<script>
+const API='http://127.0.0.1:5000';
+let farmUser=null,allOrders=[],lineChart=null,donutChart=null;
+
+window.onload=()=>{
+  const s=localStorage.getItem('farmUser');
+  if(!s){location.href='auth.html';return;}
+  farmUser=JSON.parse(s);
+  if(farmUser.role!=='Farmer'||!farmUser.farm_id){location.href='shop.html';return;}
+  setupNavigation(farmUser);
+  updateCartBadge();
+  loadDashboard();
+};
+
+function updateCartBadge() {
+    const cartStr = localStorage.getItem('farmCart');
+    if (cartStr) {
+        try {
+            const cart = JSON.parse(cartStr);
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const badge = document.getElementById('navCartBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        } catch(e) {}
+    }
+}
+
+function setupNavigation(user) {
+    const navAuth = document.getElementById('navAuth');
+    if (!navAuth) return;
+    if (user) {
+        navAuth.innerHTML = `
+            <div class="flex items-center gap-4">
+                <span class="text-green-800 bg-green-100 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2">
+                    🧑‍🌾 👋 Hi, ${user.first_name}
+                </span>
+                <button onclick="logout()" class="text-sm text-red-600 hover:text-red-800 font-medium">Logout</button>
+            </div>
+        `;
+    }
+}
+
+function goToShop(e) {
+    if(e) e.preventDefault();
+    const stored = localStorage.getItem('farmUser');
+    if (!stored) {
+        window.location.href = 'shop.html';
+        return;
+    }
+    const user = JSON.parse(stored);
+    if (user.role === 'Farmer') {
+        window.location.href = 'farmer-dashboard.html';
+    } else {
+        window.location.href = 'shop.html';
+    }
+}
+
+async function loadDashboard(){
+  try{
+    const[dRes,rRes,catRes]=await Promise.all([
+      fetch(`${API}/farmer/dashboard/${farmUser.farm_id}`),
+      fetch(`${API}/farmer/reviews/${farmUser.farm_id}`),
+      fetch(`${API}/categories`)
+    ]);
+    const d=await dRes.json();
+    const reviews=await rRes.json();
+    const cats=await catRes.json();
+    allOrders=d.orders||[];
+    renderHero(d.analytics,d.inventory);
+    renderStats(d.analytics,d.top_product,d.orders_by_status);
+    renderCharts(d.revenue_by_day,d.orders_by_status);
+    renderInventory(d.inventory);
+    renderOrders(allOrders);
+    renderReviews(reviews);
+    populateCatSelect(cats);
+    loadMessages();
+  }catch(e){showToast('Failed to load dashboard',true);}
+}
+
+function renderHero(a,inv){
+  document.getElementById('heroName').textContent=a.farm_name||`${farmUser.first_name}'s Farm`;
+  document.getElementById('heroLocation').textContent='📍 '+(a.farm_location||'India');
+  document.getElementById('heroSince').textContent=farmUser.created_at||'—';
+  const r=parseFloat(a.average_product_rating)||0;
+  document.getElementById('heroStars').innerHTML=[1,2,3,4,5].map(i=>
+    `<span class="${i<=Math.round(r)?'star-filled':'star-empty'}">★</span>`).join('');
+  const low=inv&&inv.some(p=>p.stock_quantity<=10);
+  const badge=document.getElementById('heroBadge');
+  if(low){badge.textContent='⚠ Low Stock Warning';badge.className='px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800';}
+  else{badge.textContent='✅ Active';badge.className='px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800';}
+}
+
+function renderStats(a,top,byStatus){
+  document.getElementById('sRevenue').textContent=`₹${parseFloat(a.total_revenue||0).toLocaleString('en-IN')}`;
+  document.getElementById('sOrders').textContent=a.total_orders||0;
+  document.getElementById('sRating').textContent=`${parseFloat(a.average_product_rating||0).toFixed(1)} ⭐`;
+  document.getElementById('sTop').textContent=top?.name||'N/A';
+  document.getElementById('sTopUnits').textContent=`${top?.units_sold||0} units this month`;
+  const p=byStatus?.Pending||0;
+  document.getElementById('sPending').textContent=p;
+  if(p>0)document.getElementById('pendingPulse').classList.remove('hidden');
+}
+
+function renderCharts(byDay,byStatus){
+  const days=[];const today=new Date();
+  for(let i=6;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);days.push(d.toISOString().split('T')[0]);}
+  const revMap={};(byDay||[]).forEach(r=>revMap[r.date]=r.revenue);
+  const revData=days.map(d=>revMap[d]||0);
+
+  if(lineChart)lineChart.destroy();
+  lineChart=new Chart(document.getElementById('lineChart').getContext('2d'),{
+    type:'line',
+    data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Revenue (₹)',data:revData,
+      borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,.1)',fill:true,tension:.4,pointRadius:4,pointBackgroundColor:'#16a34a'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>'₹'+v}}}}
+  });
+
+  if(donutChart)donutChart.destroy();
+  const bs=byStatus||{};
+  donutChart=new Chart(document.getElementById('donutChart').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['Pending','Shipped','Completed','Cancelled'],
+      datasets:[{data:[bs.Pending||0,bs.Shipped||0,bs.Completed||0,bs.Cancelled||0],
+        backgroundColor:['#f59e0b','#3b82f6','#16a34a','#ef4444'],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+function renderInventory(inv){
+  const b=document.getElementById('invBody');
+  if(!inv||!inv.length){b.innerHTML=`<tr><td colspan="6" class="py-8 text-center text-gray-400">No products yet. Click "+ Add Product" to get started.</td></tr>`;return;}
+  b.innerHTML=inv.map(p=>{
+    const low=p.stock_quantity<=10;
+    const rowBg=low?'bg-red-50':'';
+    const active=p.is_active!==0;
+    return`<tr class="${rowBg} hover:bg-gray-50 transition-colors">
+      <td class="py-3 pr-4 font-medium text-gray-900">${p.name}</td>
+      <td class="py-3 pr-4 text-gray-600">₹${p.price}</td>
+      <td class="py-3 pr-4 text-gray-500 text-xs">${p.harvest_date||'—'}</td>
+      <td class="py-3 pr-4 text-center">
+        <input type="number" id="stock_${p.product_id}" value="${p.stock_quantity}" min="0"
+          class="w-20 px-2 py-1 border rounded text-center text-sm ${low?'border-red-400 text-red-600 font-bold':'border-gray-300'}">
+      </td>
+      <td class="py-3 pr-4 text-center">
+        <label class="toggle"><input type="checkbox" ${active?'checked':''} onchange="toggleActive(${p.product_id},this.checked)"><span class="slider"></span></label>
+      </td>
+      <td class="py-3 text-right">
+        <button onclick="updateStock(${p.product_id})" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded font-medium border border-blue-200">Update</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderOrders(orders){
+  const c=document.getElementById('ordersContainer');
+  if(!orders||!orders.length){c.innerHTML=`<p class="text-center text-gray-400 py-8">No orders yet.</p>`;return;}
+  const statuses=['Pending','Shipped','Completed','Cancelled'];
+  c.innerHTML=orders.map(o=>{
+    const cls={Pending:'order-card-pending',Shipped:'order-card-shipped',Completed:'order-card-completed',Cancelled:'order-card-cancelled'}[o.status]||'';
+    const opts=statuses.map(s=>`<option ${o.status===s?'selected':''} value="${s}">${s}</option>`).join('');
+    return`<div class="border rounded-xl p-4 bg-white shadow-sm ${cls}" data-status="${o.status}">
+      <div class="flex justify-between items-start flex-wrap gap-2">
+        <div>
+          <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">Order #${o.order_id}</span>
+          <p class="font-semibold text-gray-900 mt-1">${o.product_name}</p>
+          <p class="text-xs text-gray-500 mt-0.5">${o.first_name} ${o.last_name} · ${o.address||'No address'}</p>
+          <p class="text-xs text-gray-400">${o.order_date}</p>
+        </div>
+        <div class="text-right">
+          <select onchange="updateOrderStatus(${o.order_id},this.value)" class="text-xs border rounded px-2 py-1 mb-1 focus:ring-green-500">${opts}</select>
+          <p class="text-sm font-bold text-gray-800">₹${o.price} × ${o.quantity}</p>
+          <p class="text-sm font-semibold text-green-700">= ₹${(o.price*o.quantity).toFixed(2)}</p>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterOrders(status,btn){
+  if(btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+  const filtered=status==='All'?allOrders:allOrders.filter(o=>o.status===status);
+  renderOrders(filtered);
+}
+
+function renderReviews(reviews){
+  const c=document.getElementById('reviewsContainer');
+  if(!reviews||!reviews.length){c.innerHTML=`<div class="text-center py-10 text-gray-400"><p class="text-3xl mb-2">🌱</p><p>No reviews yet. Keep delivering fresh produce!</p></div>`;return;}
+  c.innerHTML=reviews.map(r=>{
+    const stars=[1,2,3,4,5].map(i=>`<span class="${i<=r.rating?'star-filled':'star-empty'}">★</span>`).join('');
+    return`<div class="border border-gray-200 rounded-xl p-4 bg-white">
+      <div class="flex justify-between items-start flex-wrap gap-2">
+        <div>
+          <p class="font-semibold text-gray-800">${r.product_name}</p>
+          <p class="text-xs text-gray-500">by ${r.customer_first} ${r.customer_last}</p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <div class="flex text-lg">${stars}</div>
+          <p class="text-xs text-gray-400">${r.created_at}</p>
+        </div>
+      </div>
+      ${r.comment?`<p class="mt-2 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">"${r.comment}"</p>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function loadMessages(){
+  try{
+    const res=await fetch(`${API}/messages/${farmUser.user_id}`);
+    const msgs=await res.json();
+    renderMessages(msgs);
+  }catch(e){}
+}
+
+function renderMessages(msgs){
+  const c=document.getElementById('inboxContainer');
+  const sel=document.getElementById('replyToUser');
+  const myId=farmUser.user_id;
+  if(!msgs||!msgs.length){c.innerHTML=`<p class="text-center text-gray-400 py-4">No messages yet.</p>`;return;}
+  const customers=new Map();
+  let unread=0;
+  c.innerHTML=msgs.map(m=>{
+    const mine=m.sender_id===myId;
+    if(!mine){customers.set(m.sender_id,`${m.sender_first} ${m.sender_last}`);unread++;}
+    const bub=mine?'bg-green-100 border-green-200 self-end ml-12':'bg-white border-gray-200 self-start mr-12';
+    return`<div class="flex flex-col ${mine?'items-end':'items-start'}">
+      <div class="border px-4 py-2 rounded-xl shadow-sm ${bub} max-w-xs">
+        <div class="flex justify-between gap-4 mb-1">
+          <span class="font-bold text-xs ${mine?'text-green-800':'text-gray-700'}">${mine?'You':m.sender_first+' '+m.sender_last}</span>
+          <span class="text-xs text-gray-400">${m.sent_at}</span>
+        </div>
+        <p class="text-sm break-words">${m.content}</p>
+      </div>
+    </div>`;
+  }).join('');
+  c.scrollTop=c.scrollHeight;
+  sel.innerHTML='<option value="">Reply to...</option>';
+  customers.forEach((n,id)=>sel.innerHTML+=`<option value="${id}">${n}</option>`);
+  const badge=document.getElementById('unreadBadge');
+  if(unread>0){badge.textContent=unread;badge.classList.remove('hidden');}
+}
+
+async function updateStock(id){
+  const v=parseInt(document.getElementById(`stock_${id}`).value);
+  if(isNaN(v)||v<0){showToast('Invalid stock value',true);return;}
+  try{
+    const res=await fetch(`${API}/farmer/inventory/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({stock_quantity:v})});
+    const d=await res.json();
+    res.ok?showToast('✅ Stock updated!'):showToast('❌ '+d.error,true);
+    if(res.ok)loadDashboard();
+  }catch(e){showToast('Network error',true);}
+}
+
+async function toggleActive(id,val){
+  try{
+    const res=await fetch(`${API}/farmer/inventory/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_active:val?1:0})});
+    const d=await res.json();
+    res.ok?showToast(val?'✅ Product activated':'✅ Product deactivated'):showToast('❌ '+d.error,true);
+  }catch(e){showToast('Network error',true);}
+}
+
+async function updateOrderStatus(id,status){
+  try{
+    const res=await fetch(`${API}/orders/${id}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});
+    res.ok?showToast(`Order #${id} → ${status}`):showToast('Update failed',true);
+    if(res.ok)loadDashboard();
+  }catch(e){showToast('Network error',true);}
+}
+
+function populateCatSelect(cats){
+  const s=document.getElementById('mCat');
+  cats.forEach(c=>s.innerHTML+=`<option value="${c.category_id}">${c.name}</option>`);
+}
+
+async function submitProduct(){
+  const name=document.getElementById('mName').value.trim();
+  const cat=document.getElementById('mCat').value;
+  const price=document.getElementById('mPrice').value;
+  const stock=document.getElementById('mStock').value;
+  const harvest=document.getElementById('mHarvest').value;
+  const img=document.getElementById('mImage').value.trim();
+  if(!name||!cat||!price||!stock){showToast('Please fill all required fields',true);return;}
+  try{
+    const res=await fetch(`${API}/farmer/products`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,category_id:parseInt(cat),farm_id:farmUser.farm_id,price:parseFloat(price),stock_quantity:parseInt(stock),harvest_date:harvest||null,image_url:img})});
+    const d=await res.json();
+    if(res.ok){showToast('✅ Product added!');closeModal();loadDashboard();}
+    else showToast('❌ '+d.error,true);
+  }catch(e){showToast('Network error',true);}
+}
+
+async function sendReply(){
+  const rid=document.getElementById('replyToUser').value;
+  const inp=document.getElementById('replyMessage');
+  const content=inp.value.trim();
+  if(!rid||!content){showToast('Select a customer and type a message',true);return;}
+  try{
+    const res=await fetch(`${API}/messages`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({sender_id:farmUser.user_id,receiver_id:parseInt(rid),content})});
+    if(res.ok){inp.value='';loadMessages();showToast('Message sent!');}
+    else showToast('Failed to send',true);
+  }catch(e){showToast('Network error',true);}
+}
+
+function openModal(){document.getElementById('modal').classList.remove('hidden');}
+function closeModal(){document.getElementById('modal').classList.add('hidden');}
+function logout(){localStorage.removeItem('farmUser');location.href='index.html';}
+
+let fabOpen=false;
+function toggleFab(){
+  fabOpen=!fabOpen;
+  const sub=document.getElementById('fabSub');
+  const btn=document.getElementById('fabMain');
+  sub.classList.toggle('open',fabOpen);
+  btn.textContent=fabOpen?'✕':'＋';
+  btn.style.transform=fabOpen?'rotate(45deg)':'rotate(0)';
+}
+
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.backgroundColor=err?'#ef4444':'#1f2937';
+  t.classList.remove('opacity-0');
+  t.classList.add('opacity-100');
+  setTimeout(()=>{t.classList.remove('opacity-100');t.classList.add('opacity-0');},3000);
+}
+</script>
+</body>
+</html>
