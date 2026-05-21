@@ -469,11 +469,19 @@ def add_review():
         if not cursor.fetchone():
             return jsonify({"error": "You can only review products you have purchased."}), 403
 
-        # Insert review. The trg_update_rating trigger will auto-fire and update Products.rating!
+        # Insert review
         cursor.execute(
             "INSERT INTO Reviews (product_id, customer_id, rating, comment) VALUES (%s, %s, %s, %s)",
             (product_id, customer_id, rating, comment)
         )
+        
+        # Manually update product rating because triggers are disabled on cloud databases
+        cursor.execute("""
+            UPDATE Products
+            SET rating = (SELECT COALESCE(AVG(rating), 0) FROM Reviews WHERE product_id = %s)
+            WHERE product_id = %s
+        """, (product_id, product_id))
+        
         db.commit()
         return jsonify({"message": "Review submitted successfully! Thank you."})
     except mysql.connector.Error as err:

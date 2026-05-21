@@ -1,8 +1,9 @@
 -- ───────────────────────────────────────────────────────────────
 -- FARM TO TABLE: CORE SCHEMA (Clean Master Template)
 -- ───────────────────────────────────────────────────────────────
-CREATE DATABASE IF NOT EXISTS farm_to_table;
-USE farm_to_table;
+-- CREATE DATABASE IF NOT EXISTS farm_to_table;
+-- USE farm_to_table;
+
 
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -122,26 +123,12 @@ CREATE TABLE Support_Messages (
 );
 
 -- ─── PROCEDURES & TRIGGERS ─────────────────────────
+-- Note: Triggers (trg_deduct_stock and trg_update_rating) are omitted here because shared cloud
+-- databases (like Clever Cloud, AWS RDS) restrict SUPER privileges required for triggers.
+-- Instead, stock deduction is handled directly within the sp_PlaceOrder procedure,
+-- and product ratings are updated manually in the backend code (app.py) after inserting reviews.
 
 DELIMITER //
-
-CREATE TRIGGER trg_deduct_stock
-AFTER INSERT ON Order_Items
-FOR EACH ROW
-BEGIN
-    UPDATE Products 
-    SET stock_quantity = stock_quantity - NEW.quantity 
-    WHERE product_id = NEW.product_id;
-END //
-
-CREATE TRIGGER trg_update_rating
-AFTER INSERT ON Reviews
-FOR EACH ROW
-BEGIN
-    UPDATE Products
-    SET rating = (SELECT AVG(rating) FROM Reviews WHERE product_id = NEW.product_id)
-    WHERE product_id = NEW.product_id;
-END //
 
 CREATE PROCEDURE sp_PlaceOrder(
     IN p_customer_id INT, 
@@ -173,6 +160,11 @@ BEGIN
         
         INSERT INTO Order_Items (order_id, product_id, quantity, price) 
         VALUES (p_order_id, v_prod_id, v_qty, v_price);
+        
+        -- Deduct stock directly inside procedure (replicates trigger trg_deduct_stock)
+        UPDATE Products 
+        SET stock_quantity = stock_quantity - v_qty 
+        WHERE product_id = v_prod_id;
         
         SET v_idx = v_idx + 1;
     END WHILE;

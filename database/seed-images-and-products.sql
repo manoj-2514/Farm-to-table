@@ -1,4 +1,4 @@
-USE farm_to_table;
+-- USE farm_to_table;
 
 -- ═══════════════════════════════════════════════════════════════
 -- FARM TO TABLE — SEED DATA (All images browser-verified)
